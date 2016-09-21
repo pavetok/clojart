@@ -4,7 +4,10 @@
 (defn generate
   "docstring"
   [expression]
-  (let [[head, tail] expression]
-    (str head "(" tail ")")
+  (if (not (list? expression))
+    expression
+    (let [[head, tail] expression]
+      (str head "(" (generate tail) ")")
+      )
     )
   )
