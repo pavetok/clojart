@@ -2,15 +2,26 @@
 
 (use 'clojure.string)
 
-(def operators {:assert "assert" :is-prime "isPrime"})
+(def operators {
+                :java {"is-prime" "isPrime"}
+                :python {"true" "True" "is-prime" "is_prime"}
+                })
+
+(defn translate
+  "Translate operands"
+  [lang operand]
+  (let [dictionary (operators (keyword lang))]
+    (get dictionary (str operand) (str operand))
+    )
+  )
 
 (defn generate
-  "docstring"
+  "Language specific assert expressions generator"
   [lang expression]
   (if (not (list? expression))
-    expression
-    (let [[name, operands] expression]
-      (str (operators (keyword name)) "(" (generate lang operands) ")")
+    (translate lang expression)
+    (let [[operator, operands] expression]
+      (str (translate lang operator) "(" (generate lang operands) ")")
       )
     )
   )
