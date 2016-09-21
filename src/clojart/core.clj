@@ -3,8 +3,10 @@
 (use 'clojure.string)
 
 (def operators {
-                :java {"is-prime" "isPrime"}
+                :java   {"is-prime" "isPrime" "not" "!"}
+                :ruby   {"is-prime" "is_prime"}
                 :python {"true" "True" "is-prime" "is_prime"}
+                :js     {"is-prime" "isPrime"}
                 })
 
 (defn translate
