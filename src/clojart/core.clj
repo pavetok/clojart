@@ -1,28 +1,26 @@
 (ns clojart.core)
 
-(use 'clojure.string)
+(require '[clojure.string :as s])
 
-(def operators {
-                :java   {"is-prime" "isPrime" "not" "!"}
-                :ruby   {"is-prime" "is_prime"}
-                :python {"true" "True" "is-prime" "is_prime"}
-                :js     {"is-prime" "isPrime"}
-                })
+(def langs (-> (make-hierarchy)
+               (derive :python :underscore)
+               (derive :ruby :underscore)
+               (derive :java :camelCase)
+               (derive :js :camelCase)
+               ))
 
-(defn translate
-  "Translate operands"
-  [lang operand]
-  (let [dictionary (operators (keyword lang))]
-    (get dictionary (str operand) (str operand))
-    )
-  )
+(defmulti translate (fn [lang expression & _] [lang expression]) :hierarchy #'langs)
+(defmethod translate [:camelCase 'is-prime] [_ _] 'isPrime)
+(defmethod translate [:underscore 'is-prime] [_ _] 'is_prime)
+(defmethod translate [:python 'true] [_ _] 'True)
+(defmethod translate :default [_ expression] expression)
 
 (defn generate
-  "Language specific assert expressions generator"
+  "Generator of language specific assertions"
   [lang expression]
   (if (not (list? expression))
-    (translate lang expression)
-    (let [[operator, operands] expression]
+    (str (translate lang expression))
+    (let [[operator operands] expression]
       (str (translate lang operator) "(" (generate lang operands) ")")
       )
     )
