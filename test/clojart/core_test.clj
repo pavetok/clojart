@@ -21,6 +21,7 @@
 (deftest generate-python-test
   (is (= (generate :python '(assert true)) "assert(True)"))
   (is (= (generate :python '(assert (is-prime 5))) "assert(is_prime(5))"))
+  (is (= (generate :python '(assert-equal 3 (fib 4))) "assert_equal(3, fib(4))"))
   )
 
 (deftest generate-ruby-test

@@ -11,7 +11,7 @@
 
 (defmulti translate (fn [lang expression & _] [lang expression]) :hierarchy #'langs)
 (defmethod translate [:camelCase 'is-prime] [_ _] 'isPrime)
-(defmethod translate [:underscore 'is-prime] [_ _] 'is_prime)
+(defmethod translate [:underscore :default] [_ _] 'is_prime)
 (defmethod translate [:python 'true] [_ _] 'True)
 (defmethod translate :default [_ expression] expression)
 
