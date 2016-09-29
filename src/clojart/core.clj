@@ -2,26 +2,31 @@
 
 (require '[clojure.string :as s])
 
-(def langs (-> (make-hierarchy)
-               (derive :python :underscore)
-               (derive :ruby :underscore)
-               (derive :java :camelCase)
-               (derive :js :camelCase)
-               ))
+(def kinds {:python :underscore,
+            :ruby :underscore,
+            :java :camelCase,
+            :js :camelCase})
 
-(defmulti translate (fn [lang expression & _] [lang expression]) :hierarchy #'langs)
-(defmethod translate [:camelCase 'is-prime] [_ _] 'isPrime)
-(defmethod translate [:underscore :default] [_ _] 'is_prime)
-(defmethod translate [:python 'true] [_ _] 'True)
-(defmethod translate :default [_ expression] expression)
+(def dictionary {})
+
+(defn underscorize [function] (s/replace function "-" "_"))
+
+(defn camelize [function]
+  (let [words (s/split (str function) #"-")]
+    (s/join "" (cons (s/lower-case (first words)) (map s/capitalize (rest words))))))
+
+(defmulti to (fn [lang operator] [(lang kinds) (dictionary operator :function)]))
+(defmethod to [:underscore :function] [_ operator] (underscorize operator))
+(defmethod to [:camelCase :function] [_ operator] (camelize operator))
+(defmethod to :default [_ operator] operator)
 
 (defn generate
   "Generator of language specific assertions"
   [lang expression]
   (if (not (list? expression))
-    (str (translate lang expression))
+    (str (to lang expression))
     (let [[operator operands] expression]
-      (str (translate lang operator) "(" (generate lang operands) ")")
+      (str (to lang operator) "(" (generate lang operands) ")")
       )
     )
   )

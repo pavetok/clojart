@@ -3,14 +3,15 @@
 (use 'clojure.test)
 (use 'clojart.core)
 
-(deftest hierarchy-test
-  (is (isa? langs :python :underscore))
+(deftest transformation-test
+  (is (= (camelize 'is-prime) "isPrime"))
+  (is (= (underscorize 'is-prime) "is_prime"))
   )
 
-(deftest generate-operator-test
-  (is (= (generate ::java 'assert) "assert"))
-  (is (= (generate ::java 'true) "true"))
-  (is (= (generate :python 'true) "True"))
+(deftest operator-test
+  (is (= (to :java 'is-prime) "isPrime"))
+  (is (= (to :java 'assert) "assert"))
+  (is (= (to :java 'true) "true"))
   )
 
 (deftest generate-java-test
