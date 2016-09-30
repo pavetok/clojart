@@ -10,8 +10,8 @@
 
 (deftest operator-test
   (is (= (to :java 'is-prime) "isPrime"))
-  (is (= (to :java 'assert) "assert"))
-  (is (= (to :java 'true) "true"))
+  (is (= (to :java 'assert) 'assert))
+  (is (= (to :python 'true) 'True))
   )
 
 (deftest generate-java-test

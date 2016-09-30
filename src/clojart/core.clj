@@ -2,22 +2,28 @@
 
 (require '[clojure.string :as s])
 
-(def kinds {:python :underscore,
-            :ruby :underscore,
-            :java :camelCase,
-            :js :camelCase})
+(def taxonomy (-> (make-hierarchy)
+                  (derive :python :underscore)
+                  (derive :ruby :underscore)
+                  (derive :java :camelCase)
+                  (derive :js :camelCase)))
 
-(def dictionary {})
+(defn classify [operator]
+  (if (re-find #".+-" (str operator))
+    :function
+    operator))
 
-(defn underscorize [function] (s/replace function "-" "_"))
+(defn underscorize [function]
+  (s/replace function "-" "_"))
 
 (defn camelize [function]
   (let [words (s/split (str function) #"-")]
     (s/join "" (cons (s/lower-case (first words)) (map s/capitalize (rest words))))))
 
-(defmulti to (fn [lang operator] [(lang kinds) (dictionary operator :function)]))
+(defmulti to (fn [lang operator] [lang (classify operator)]) :hierarchy #'taxonomy)
 (defmethod to [:underscore :function] [_ operator] (underscorize operator))
 (defmethod to [:camelCase :function] [_ operator] (camelize operator))
+(defmethod to [:python 'true] [_ _] 'True)
 (defmethod to :default [_ operator] operator)
 
 (defn generate
@@ -25,8 +31,8 @@
   [lang expression]
   (if (not (list? expression))
     (str (to lang expression))
-    (let [[operator operands] expression]
-      (str (to lang operator) "(" (generate lang operands) ")")
+    (let [[operator & operands] expression]
+      (s/join "" (cons (to lang operator) (map #(generate lang %) operands)))
       )
     )
   )
