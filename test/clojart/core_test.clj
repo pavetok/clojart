@@ -3,20 +3,38 @@
 (use 'clojure.test)
 (use 'clojart.core)
 
+(deftest classify-test
+  (is (= (classify 'is-prime) :function))
+  (is (= (classify 'assert) 'assert))
+  (is (= (classify '+) :infix))
+  )
+
 (deftest transformation-test
   (is (= (camelize 'is-prime) "isPrime"))
   (is (= (underscorize 'is-prime) "is_prime"))
   )
 
-(deftest operator-test
-  (is (= (to :java 'is-prime) "isPrime"))
-  (is (= (to :java 'assert) 'assert))
-  (is (= (to :python 'true) 'True))
+(deftest rearrange-test
+  (is (= (rearrange :python '(+ 1 2)) '(1 + 2)))
+  (is (= (rearrange :python '(- 1 2)) '(1 - 2)))
+  )
+
+(deftest enrich-test
+  (is (= (enrich :python '(+ 1 2)) '(:ob + 1 2 :cb)))
+  (is (= (enrich :python '(assert true)) '(assert true)))
+  )
+
+(deftest translate-test
+  (is (= (translate :java 'is-prime) "isPrime"))
+  (is (= (translate :ruby 'is-prime) "is_prime"))
+  (is (= (translate :java 'assert) 'assert))
+  (is (= (translate :python 'true) 'True))
   )
 
 (deftest generate-java-test
   (is (= (generate :java '(assert true)) "assert(true)"))
   (is (= (generate :java '(assert (is-prime 5))) "assert(isPrime(5))"))
+  (is (= (generate :java '(assert (+ 1 2))) "assert(1 + 2)"))
   )
 
 (deftest generate-python-test
