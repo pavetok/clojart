@@ -7,13 +7,18 @@
                   (derive :ruby :any)
                   (derive :java :any)
                   (derive :js :any)
+
                   (derive :python :underscore)
                   (derive :ruby :underscore)
                   (derive :java :camelCase)
                   (derive :js :camelCase)
+
                   (derive :js :!)
                   (derive :java :!)
                   (derive :ruby :!)
+
+                  (derive :python :simple)
+                  (derive :ruby :simple)
                   ))
 
 (def infix #{'+ '-})
@@ -24,6 +29,7 @@
     (some #{operator} infix) :infix
     (instance? Boolean operator) :bool
     (some #{operator} logic) :logic
+    (= operator 'def) :variable
     :else :function))
 
 (defn underscorize [function]
@@ -38,11 +44,19 @@
 (defmethod tokenize-seq [:any :logic] [_ operator] operator)
 
 (defmethod tokenize-seq [:python :logic] [_ expression]
-  (let [[operator operand] expression] (list operator " " operand)))
+  (let [[operator operand] expression]
+    (list operator " " operand)))
 
 (defmethod tokenize-seq [:any :infix] [_ expression]
   (let [[operator left right] expression]
     (list left " " operator " " right)))
+
+(defmethod tokenize-seq [:simple :variable] [_ expression]
+  (let [[_ name value] expression]
+    (list name " " '= " " value)))
+
+(defmethod tokenize-seq [:js :variable] [_ expression]
+  (concat '(var " ") (tokenize-seq :simple expression)))
 
 (defmethod tokenize-seq :default [_ expression]
   (let [[operator & args] expression]

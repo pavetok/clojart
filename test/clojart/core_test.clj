@@ -7,6 +7,7 @@
   (is (= (classify 'is-prime) :function))
   (is (= (classify 'assert) :function))
   (is (= (classify '+) :infix))
+  (is (= (classify 'def) :def))
   )
 
 (deftest transformation-test
@@ -22,6 +23,7 @@
   (is (= (tokenize :any '(is-prime 5)) '(is-prime "(" 5 ")")))
   (is (= (tokenize :any 5) 5))
   (is (= (tokenize :any '(not true)) '(not true)))
+  (is (= (tokenize :python '(def my-var 1)) '(my-var " " = " " 1)))
   )
 
 (deftest translate-test
@@ -46,6 +48,7 @@
   (is (= (generate :python '(assert (is-prime 5))) "assert(is_prime(5))"))
   (is (= (generate :python '(assert-equal 3 (fib 4))) "assert_equal(3, fib(4))"))
   (is (= (generate :python '(assert (not false))) "assert(not False)"))
+  (is (= (generate :python '(def my-var 1)) "my_var = 1"))
   )
 
 (deftest generate-ruby-test
@@ -53,6 +56,7 @@
   (is (= (generate :ruby '(assert (is-prime 5))) "assert(is_prime(5))"))
   (is (= (generate :ruby '(assert-equal 3 (fib 4))) "assert_equal(3, fib(4))"))
   (is (= (generate :ruby '(assert (not false))) "assert(!false)"))
+  (is (= (generate :ruby '(def my-var 1)) "my_var = 1"))
   )
 
 (deftest generate-javascript-test
@@ -60,4 +64,5 @@
   (is (= (generate :js '(assert (is-prime 5))) "assert(isPrime(5))"))
   (is (= (generate :js '(assert-equal 3 (fib 4))) "assertEqual(3, fib(4))"))
   (is (= (generate :js '(assert (not false))) "assert(!false)"))
+  (is (= (generate :js '(def my-var 1)) "var myVar = 1"))
   )
