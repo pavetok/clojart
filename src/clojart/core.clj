@@ -3,22 +3,26 @@
 (require '[clojure.string :as s])
 
 (def taxonomy (-> (make-hierarchy)
-                  (derive :underscore :any)
-                  (derive :camelCase :any)
+                  (derive :python :any)
+                  (derive :ruby :any)
+                  (derive :java :any)
+                  (derive :js :any)
                   (derive :python :underscore)
                   (derive :ruby :underscore)
                   (derive :java :camelCase)
-                  (derive :js :camelCase)))
+                  (derive :js :camelCase)
+                  (derive :js :!)
+                  (derive :java :!)
+                  (derive :ruby :!)
+                  ))
 
 (def infix #{'+ '-})
-(def bools #{true false})
 (def logic #{'not})
 
 (defn classify [operator]
   (cond
-    ;(re-find #".+-" (str operator)) :function
     (some #{operator} infix) :infix
-    (some #{operator} bools) :bool
+    (instance? Boolean operator) :bool
     (some #{operator} logic) :logic
     :else :function))
 
@@ -30,35 +34,39 @@
     (s/join "" (cons (s/lower-case (first words)) (map s/capitalize (rest words))))))
 
 (defmulti tokenize-seq (fn [lang expression] [lang (classify (first expression))]) :hierarchy #'taxonomy)
+
 (defmethod tokenize-seq [:any :logic] [_ operator] operator)
+
+(defmethod tokenize-seq [:python :logic] [_ expression]
+  (let [[operator operand] expression] (list operator " " operand)))
+
 (defmethod tokenize-seq [:any :infix] [_ expression]
   (let [[operator left right] expression]
-    (with-meta (list left " " operator " " right) {:tokenized true})))
+    (list left " " operator " " right)))
+
 (defmethod tokenize-seq :default [_ expression]
   (let [[operator & args] expression]
-    (with-meta
-      (concat
-        (list operator "(")
-        (interpose ", " args)
-        (list ")"))
-      {:tokenized true})))
+    (concat
+      (list operator "(")
+      (interpose ", " args)
+      (list ")"))))
 
 (defn tokenize [lang expression]
   (cond
     (not (seq? expression)) expression
     (:tokenized (meta expression)) expression
-    :else (tokenize-seq lang expression)))
+    :else (with-meta (tokenize-seq lang expression) {:tokenized true})))
 
 (defmulti translate (fn [lang operator] [lang (classify operator)]) :hierarchy #'taxonomy)
 (defmethod translate [:underscore :function] [_ operator] (underscorize operator))
 (defmethod translate [:camelCase :function] [_ operator] (camelize operator))
 (defmethod translate [:python :bool] [_ operator] (s/capitalize operator))
+(defmethod translate [:! :logic] [_ _] "!")
 (defmethod translate :default [_ operator] (str operator))
 
 (defn generate
   "Generator of language specific assertions"
   [lang expression]
-  ;(println expression)
   (cond
     (not (seq? expression)) (translate lang expression)
     :else (s/join "" (->>
