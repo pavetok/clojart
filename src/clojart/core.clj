@@ -32,44 +32,44 @@
     (= operator 'def) :variable
     :else :function))
 
-(defn underscorize [function]
-  (s/replace function "-" "_"))
+(defmulti restructure-seq (fn [lang expression] [lang (classify (first expression))]) :hierarchy #'taxonomy)
 
-(defn camelize [function]
-  (let [words (s/split (str function) #"-")]
-    (s/join "" (cons (s/lower-case (first words)) (map s/capitalize (rest words))))))
+(defmethod restructure-seq [:any :logic] [_ operator] operator)
 
-(defmulti tokenize-seq (fn [lang expression] [lang (classify (first expression))]) :hierarchy #'taxonomy)
-
-(defmethod tokenize-seq [:any :logic] [_ operator] operator)
-
-(defmethod tokenize-seq [:python :logic] [_ expression]
+(defmethod restructure-seq [:python :logic] [_ expression]
   (let [[operator operand] expression]
     (list operator " " operand)))
 
-(defmethod tokenize-seq [:any :infix] [_ expression]
+(defmethod restructure-seq [:any :infix] [_ expression]
   (let [[operator left right] expression]
     (list left " " operator " " right)))
 
-(defmethod tokenize-seq [:simple :variable] [_ expression]
+(defmethod restructure-seq [:simple :variable] [_ expression]
   (let [[_ name value] expression]
     (list name " " '= " " value)))
 
-(defmethod tokenize-seq [:js :variable] [_ expression]
-  (concat '(var " ") (tokenize-seq :simple expression)))
+(defmethod restructure-seq [:js :variable] [_ expression]
+  (concat '(var " ") (restructure-seq :simple expression)))
 
-(defmethod tokenize-seq :default [_ expression]
+(defmethod restructure-seq :default [_ expression]
   (let [[operator & args] expression]
     (concat
       (list operator "(")
       (interpose ", " args)
       (list ")"))))
 
-(defn tokenize [lang expression]
+(defn restructure [lang expression]
   (cond
     (not (seq? expression)) expression
-    (:tokenized (meta expression)) expression
-    :else (with-meta (tokenize-seq lang expression) {:tokenized true})))
+    (:restructured (meta expression)) expression
+    :else (with-meta (restructure-seq lang expression) {:restructured true})))
+
+(defn underscorize [function]
+  (s/replace function "-" "_"))
+
+(defn camelize [function]
+  (let [words (s/split (str function) #"-")]
+    (s/join "" (cons (s/lower-case (first words)) (map s/capitalize (rest words))))))
 
 (defmulti translate (fn [lang operator] [lang (classify operator)]) :hierarchy #'taxonomy)
 (defmethod translate [:underscore :function] [_ operator] (underscorize operator))
@@ -79,13 +79,13 @@
 (defmethod translate :default [_ operator] (str operator))
 
 (defn generate
-  "Generator of language specific assertions"
+  "Generator of language specific expressions"
   [lang expression]
   (cond
     (not (seq? expression)) (translate lang expression)
     :else (s/join "" (->>
-                       (tokenize lang expression)
-                       (map #(tokenize lang %))
+                       (restructure lang expression)
+                       (map #(restructure lang %))
                        (map #(generate lang %))
                        ))
     )

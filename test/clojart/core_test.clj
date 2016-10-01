@@ -7,23 +7,23 @@
   (is (= (classify 'is-prime) :function))
   (is (= (classify 'assert) :function))
   (is (= (classify '+) :infix))
-  (is (= (classify 'def) :def))
+  (is (= (classify 'def) :variable))
   )
 
-(deftest transformation-test
+(deftest transformate-test
   (is (= (camelize 'is-prime) "isPrime"))
   (is (= (underscorize 'is-prime) "is_prime"))
   )
 
-(deftest tokenize-test
-  (is (= (tokenize :any '(assert true)) '(assert "(" true ")")))
-  (is (= (tokenize :any (tokenize :any '(assert true))) '(assert "(" true ")")))
-  (is (= (tokenize :any '(assert-equal 3 (fib 4))) '(assert-equal "(" 3 ", " (fib 4) ")")))
-  (is (= (tokenize :any '(+ 1 2)) '(1 " " + " " 2)))
-  (is (= (tokenize :any '(is-prime 5)) '(is-prime "(" 5 ")")))
-  (is (= (tokenize :any 5) 5))
-  (is (= (tokenize :any '(not true)) '(not true)))
-  (is (= (tokenize :python '(def my-var 1)) '(my-var " " = " " 1)))
+(deftest restructure-test
+  (is (= (restructure :any '(assert true)) '(assert "(" true ")")))
+  (is (= (restructure :any (restructure :any '(assert true))) '(assert "(" true ")")))
+  (is (= (restructure :any '(assert-equal 3 (fib 4))) '(assert-equal "(" 3 ", " (fib 4) ")")))
+  (is (= (restructure :any '(+ 1 2)) '(1 " " + " " 2)))
+  (is (= (restructure :any '(is-prime 5)) '(is-prime "(" 5 ")")))
+  (is (= (restructure :any 5) 5))
+  (is (= (restructure :any '(not true)) '(not true)))
+  (is (= (restructure :python '(def my-var 1)) '(my-var " " = " " 1)))
   )
 
 (deftest translate-test
