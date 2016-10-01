@@ -20,8 +20,11 @@
   )
 
 (deftest enrich-test
-  (is (= (enrich :python '(+ 1 2)) '(:ob + 1 2 :cb)))
   (is (= (enrich :python '(assert true)) '(assert true)))
+  (is (= (enrich :python '(+ 1 2)) '(:ob + 1 2 :cb)))
+  (is (= (enrich :python '(is-prime 5)) '(:ob is-prime 5 :cb)))
+  (is (= (enrich :python 5) '(:ob 5 :cb)))
+  (is (= (enrich :python '(not true)) '(not true)))
   )
 
 (deftest translate-test
@@ -33,8 +36,9 @@
 
 (deftest generate-java-test
   (is (= (generate :java '(assert true)) "assert(true)"))
+  (is (= (generate :java '(is-prime 5)) "isPrime(5)"))
   (is (= (generate :java '(assert (is-prime 5))) "assert(isPrime(5))"))
-  (is (= (generate :java '(assert (+ 1 2))) "assert(1 + 2)"))
+  ;(is (= (generate :java '(assert (+ 1 2))) "assert(1+2)"))
   )
 
 (deftest generate-python-test
