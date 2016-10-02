@@ -27,16 +27,16 @@
   )
 
 (deftest restructure-test
-  (is (= (restructure :any '(assert true)) '(assert "(" true ")")))
-  (is (= (restructure :any (restructure :any '(assert true))) '(assert "(" true ")")))
-  (is (= (restructure :any '(assert-equal 3 (fib 4))) '(assert-equal "(" 3 ", " (fib 4) ")")))
-  (is (= (restructure :any '(+ 1 2)) '(1 " " + " " 2)))
-  (is (= (restructure :any '(is-prime 5)) '(is-prime "(" 5 ")")))
-  (is (= (restructure :any 5) 5))
-  (is (= (restructure :any '(not true)) '(not true)))
-  (is (= (restructure :python '(def my-var 1)) '(my-var " " = " " 1)))
-  (is (= (restructure :python '(def my-var "a")) '(my-var " " = " " \' "a" \')))
-  (is (= (restructure :python '(def my-var [1 "a"])) '(my-var " " = " " "[" 1 ", " \' "a" \' "]")))
+  (is (= (structurize :any '(assert true)) '(assert "(" true ")")))
+  (is (= (structurize :any (structurize :any '(assert true))) '(assert "(" true ")")))
+  (is (= (structurize :any '(assert-equal 3 (fib 4))) '(assert-equal "(" 3 ", " (fib 4) ")")))
+  (is (= (structurize :any '(+ 1 2)) '(1 " " + " " 2)))
+  (is (= (structurize :any '(is-prime 5)) '(is-prime "(" 5 ")")))
+  (is (= (structurize :any 5) 5))
+  (is (= (structurize :any '(not true)) '(not true)))
+  (is (= (structurize :python '(def my-var 1)) '(my-var " " = " " 1)))
+  (is (= (structurize :python '(def my-var "a")) '(my-var " " = " " \' "a" \')))
+  (is (= (structurize :python '(def my-var [1 "a"])) '(my-var " " = " " "[" 1 ", " \' "a" \' "]")))
   )
 
 (deftest translate-test

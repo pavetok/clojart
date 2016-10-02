@@ -1,5 +1,5 @@
 (ns clojart.core
-  (:import (clojure.lang PersistentVector PersistentArrayMap Keyword)
+  (:import (clojure.lang PersistentArrayMap Keyword)
            (java.util Collection)))
 
 (require '[clojure.string :as s])
@@ -37,7 +37,8 @@
     (some #{operator} logic) :logic
     (= operator 'def) :variable
     (nil? operator) :nil
-    :else :function))
+    (symbol? operator) :function
+    :else operator))
 
 (defn insert [to what at]
   (let [[before after] (split-at at to)]
@@ -84,36 +85,37 @@
 (defmethod construct [:ruby Keyword] [_ keyword] (list keyword))
 (defmethod construct :default [_ value] (list value))
 
-(defmulti restructure-seq (fn [lang expression] [lang (classify (first expression))]) :hierarchy #'taxonomy)
-(defmethod restructure-seq [:any :logic] [_ operator] operator)
-(defmethod restructure-seq [:python :logic] [_ expression]
+(defmulti structurize-expression (fn [lang expression] [lang (classify (first expression))]) :hierarchy #'taxonomy)
+(defmethod structurize-expression [:any :logic] [_ operator] operator)
+(defmethod structurize-expression [:python :logic] [_ expression]
   (let [[operator operand] expression]
     (list operator " " operand)))
-(defmethod restructure-seq [:any :infix] [_ expression]
+(defmethod structurize-expression [:any :infix] [_ expression]
   (let [[operator left right] expression]
     (list left " " operator " " right)))
-(defmethod restructure-seq [:simple :variable] [lang expression]
+(defmethod structurize-expression [:simple :variable] [lang expression]
   (let [[_ name value] expression]
     (concat
       (list name " " '= " ")
       (construct lang value))))
-(defmethod restructure-seq [:js :variable] [lang expression]
+(defmethod structurize-expression [:js :variable] [lang expression]
   (let [[_ name value] expression]
     (concat
       (list 'var " " name " " '= " ")
       (construct lang value))))
-(defmethod restructure-seq :default [_ expression]
+(defmethod structurize-expression [:any :function] [_ expression]
   (let [[operator & args] expression]
     (concat
       (list operator "(")
       (interpose ", " args)
       (list ")"))))
+(defmethod structurize-expression :default [_ operator] operator)
 
-(defn restructure [lang expression]
+(defn structurize [lang expression]
   (cond
     (not (coll? expression)) expression
     (:restructured (meta expression)) expression
-    :else (with-meta (restructure-seq lang expression) {:restructured true})))
+    :else (with-meta (structurize-expression lang expression) {:restructured true})))
 
 (defn underscorize [function]
   (s/replace function "-" "_"))
@@ -123,9 +125,9 @@
     (s/join "" (cons (s/lower-case (first words)) (map s/capitalize (rest words))))))
 
 (defmulti translate (fn [lang operator] [lang (classify operator)]) :hierarchy #'taxonomy)
-(defmethod translate [:underscore :function] [_ operator] (underscorize operator))
-(defmethod translate [:camelCase :function] [_ operator] (camelize operator))
-(defmethod translate [:python :bool] [_ operator] (s/capitalize operator))
+(defmethod translate [:underscore :function] [_ name] (underscorize name))
+(defmethod translate [:camelCase :function] [_ name] (camelize name))
+(defmethod translate [:python :bool] [_ bool] (s/capitalize bool))
 (defmethod translate [:python :nil] [_ _] "None")
 (defmethod translate [:ruby :nil] [_ _] "nil")
 (defmethod translate [:js :nil] [_ _] "null")
@@ -138,8 +140,8 @@
   (cond
     (not (coll? expression)) (translate lang expression)
     :else (s/join "" (->>
-                       (restructure lang expression)
-                       (map #(restructure lang %))
+                       (structurize lang expression)
+                       (map #(structurize lang %))
                        (map #(generate lang %))
                        ))
     )
