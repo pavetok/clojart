@@ -4,6 +4,7 @@
 
 (require '[clojure.string :as s])
 
+
 (def taxonomy (-> (make-hierarchy)
                   (derive :python :any)
                   (derive :ruby :any)
@@ -26,69 +27,66 @@
                   (derive :ruby :dynamic)
                   (derive :javascript :dynamic)
 
+                  (derive :javascript :json-like)
+                  (derive :python :json-like)
+
                   (derive :javascript :semicolon-like)
                   (derive :java :semicolon-like)
                   (derive :ruby :newline-like)
                   (derive :python :newline-like)
                   ))
 
+
 (def infix #{'+ '-})
 (def logic #{'not})
 
 (defn classify [operator]
   (cond
-    (some #{operator} infix) :infix
     (instance? Boolean operator) :bool
+    (some #{operator} infix) :infix
     (some #{operator} logic) :logic
     (= operator 'def) :variable
     (nil? operator) :nil
     (symbol? operator) :function
     :else operator))
 
+
 (defn insert [to what at]
   (let [[before after] (split-at at to)]
     (concat before (list what) after)))
 
-(defmulti structurize-data (fn [lang value] [lang (type value)]) :hierarchy #'taxonomy)
+(defmulti structurize-data (fn [lang data] [lang (type data)]) :hierarchy #'taxonomy)
 (defmethod structurize-data [:dynamic Collection] [lang collection]
-  (concat
-    (list \[)
-    (flatten (interpose ", " (map #(structurize-data lang %) collection)))
-    (list \])))
+  (let [data (map #(structurize-data lang %) collection)]
+    (concat
+     (list \[)
+     (flatten (interpose ", " data))
+     (list \]))))
 (defmethod structurize-data [:ruby PersistentArrayMap] [lang dict]
-  (let [vals (->> (zipmap
+  (let [data (->> (zipmap
                     (keys dict)
                     (map #(structurize-data lang %) (vals dict)))
                   (seq)
                   (map #(insert % " => " 1)))]
     (concat
       (list \{)
-      (flatten (interpose ", " vals))
+      (flatten (interpose ", " data))
       (list \}))))
-(defmethod structurize-data [:python PersistentArrayMap] [lang dict]
-  (let [vals (->> (zipmap
+(defmethod structurize-data [:json-like PersistentArrayMap] [lang dict]
+  (let [data (->> (zipmap
                     (map #(structurize-data lang %) (keys dict))
                     (map #(structurize-data lang %) (vals dict)))
                   (seq)
                   (map #(insert % ": " 1)))]
     (concat
       (list \{)
-      (flatten (interpose ", " vals))
-      (list \}))))
-(defmethod structurize-data [:javascript PersistentArrayMap] [lang dict]
-  (let [vals (->> (zipmap
-                    (map #(structurize-data lang %) (keys dict))
-                    (map #(structurize-data lang %) (vals dict)))
-                  (seq)
-                  (map #(insert % ": " 1)))]
-    (concat
-      (list \{)
-      (flatten (interpose ", " vals))
+      (flatten (interpose ", " data))
       (list \}))))
 (defmethod structurize-data [:any String] [_ string] (list \' string \'))
-(defmethod structurize-data [:any Keyword] [_ keyword] (list \' (name keyword) \'))
 (defmethod structurize-data [:ruby Keyword] [_ keyword] (list keyword))
-(defmethod structurize-data :default [_ value] (list value))
+(defmethod structurize-data [:any Keyword] [_ keyword] (list \' (name keyword) \'))
+(defmethod structurize-data :default [_ data] (list data))
+
 
 (defmulti structurize-expression (fn [lang expression] [lang (classify (first expression))]) :hierarchy #'taxonomy)
 (defmethod structurize-expression [:any :logic] [_ expression] expression)
@@ -121,6 +119,7 @@
     (not (coll? expression)) expression
     (:structurized (meta expression)) expression
     :else (with-meta (structurize-expression lang expression) {:structurized true})))
+
 
 (defn underscorize [function]
   (s/replace function "-" "_"))
