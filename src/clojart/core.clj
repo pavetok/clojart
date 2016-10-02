@@ -37,18 +37,22 @@
   (let [[before after] (split-at at to)]
     (concat before (list what) after)))
 
-(defmulti construct (fn [lang collection] [lang (type collection)]) :hierarchy #'taxonomy)
-(defmethod construct [:simple PersistentVector] [_ collection]
+(defmulti construct (fn [lang value] [lang (type value)]) :hierarchy #'taxonomy)
+(defmethod construct [:simple PersistentVector] [lang collection]
   (concat
     (list "[")
-    (interpose ", " collection)
+    (flatten (interpose ", " (map #(construct lang %) collection)))
     (list "]")))
-(defmethod construct [:ruby PersistentArrayMap] [_ dict]
-  (let [vals (map #(insert % " => " 1) (seq dict))]
+(defmethod construct [:ruby PersistentArrayMap] [lang dict]
+  (let [vals (->> (seq dict)
+                  (map #(assoc % 1 (construct lang (last %))))
+                  (map #(insert % " => " 1))
+                  )]
     (concat
       (list "{")
       (flatten (interpose ", " vals))
       (list "}"))))
+(defmethod construct [:any String] [_ string] (list \' string \'))
 (defmethod construct :default [_ value] (list value))
 
 (defmulti restructure-seq (fn [lang expression] [lang (classify (first expression))]) :hierarchy #'taxonomy)
