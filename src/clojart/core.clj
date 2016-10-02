@@ -10,14 +10,14 @@
                   (derive :java :any)
                   (derive :js :any)
 
-                  (derive :python :underscore)
-                  (derive :ruby :underscore)
-                  (derive :java :camelCase)
-                  (derive :js :camelCase)
+                  (derive :python :underscore-like)
+                  (derive :ruby :underscore-like)
+                  (derive :java :camel-case-like)
+                  (derive :js :camel-case-like)
 
-                  (derive :js :!)
-                  (derive :java :!)
-                  (derive :ruby :!)
+                  (derive :js :exclamation-like)
+                  (derive :java :exclamation-like)
+                  (derive :ruby :exclamation-like)
 
                   (derive :python :simple)
                   (derive :ruby :simple)
@@ -25,6 +25,11 @@
                   (derive :python :dynamic)
                   (derive :ruby :dynamic)
                   (derive :js :dynamic)
+
+                  (derive :js :semicolon-like)
+                  (derive :java :semicolon-like)
+                  (derive :ruby :newline-like)
+                  (derive :python :newline-like)
                   ))
 
 (def infix #{'+ '-})
@@ -125,24 +130,27 @@
     (s/join "" (cons (s/lower-case (first words)) (map s/capitalize (rest words))))))
 
 (defmulti translate (fn [lang operator] [lang (classify operator)]) :hierarchy #'taxonomy)
-(defmethod translate [:underscore :function] [_ name] (underscorize name))
-(defmethod translate [:camelCase :function] [_ name] (camelize name))
+(defmethod translate [:underscore-like :function] [_ name] (underscorize name))
+(defmethod translate [:camel-case-like :function] [_ name] (camelize name))
 (defmethod translate [:python :bool] [_ bool] (s/capitalize bool))
 (defmethod translate [:python :nil] [_ _] "None")
 (defmethod translate [:ruby :nil] [_ _] "nil")
 (defmethod translate [:js :nil] [_ _] "null")
-(defmethod translate [:! :logic] [_ _] "!")
+(defmethod translate [:exclamation-like :logic] [_ _] "!")
+(defmethod translate [:semicolon-like :end] [_ _] ";")
+(defmethod translate [:newline-like :end] [_ _] "")
 (defmethod translate :default [_ operator] (str operator))
 
 (defn generate
-  "Generator of language specific expressions"
-  [lang expression]
-  (cond
-    (not (coll? expression)) (translate lang expression)
-    :else (s/join "" (->>
-                       (structurize lang expression)
-                       (map #(structurize lang %))
-                       (map #(generate lang %))
-                       ))
-    )
+  ([first? lang expression]
+   (cond
+     (not (coll? expression)) (translate lang expression)
+     :else (s/join "" (concat (->>
+                                (structurize lang expression)
+                                (map #(structurize lang %))
+                                (map #(generate false lang %)))
+                              (when first?
+                                (list (translate lang :end)))))
+     ))
+  ([lang expression] (generate true lang expression))
   )
