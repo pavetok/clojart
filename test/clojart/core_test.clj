@@ -16,27 +16,27 @@
   )
 
 (deftest construct-test
-  (is (= (construct :dynamic [1]) '("[" 1 "]")))
-  (is (= (construct :dynamic [1 [2]]) '("[" 1 ", " "[" 2 "]" "]")))
-  (is (= (construct :dynamic ["a"]) '("[" "a" "]")))
-  (is (= (construct :dynamic [1 2]) '("[" 1 ", " 2 "]")))
-  (is (= (construct :ruby {:k 1}) '("{" :k " => " 1 "}")))
-  (is (= (construct :ruby {:k {:inner 1}}) '("{" :k " => " "{" :inner " => " 1 "}" "}")))
-  (is (= (construct :ruby {:k "v"}) '("{" :k " => " \' "v" \' "}")))
-  (is (= (construct :ruby {:a 1, :b "b"}) '("{" :a " => " 1 ", " :b " => " \' "b" \' "}")))
+  (is (= (structurize-data :dynamic [1]) '(\[ 1 \])))
+  (is (= (structurize-data :dynamic [1 [2]]) '(\[ 1 ", " \[ 2 \] \])))
+  (is (= (structurize-data :dynamic ["a"]) '(\[ "a" \])))
+  (is (= (structurize-data :dynamic [1 2]) '(\[ 1 ", " 2 \])))
+  (is (= (structurize-data :ruby {:k 1}) '(\{ :k " => " 1 \})))
+  (is (= (structurize-data :ruby {:k {:inner 1}}) '(\{ :k " => " \{ :inner " => " 1 \} \})))
+  (is (= (structurize-data :ruby {:k "v"}) '(\{ :k " => " \' "v" \' \})))
+  (is (= (structurize-data :ruby {:a 1, :b "b"}) '(\{ :a " => " 1 ", " :b " => " \' "b" \' \})))
   )
 
-(deftest restructure-test
-  (is (= (structurize :any '(assert true)) '(assert "(" true ")")))
-  (is (= (structurize :any (structurize :any '(assert true))) '(assert "(" true ")")))
-  (is (= (structurize :any '(assert-equal 3 (fib 4))) '(assert-equal "(" 3 ", " (fib 4) ")")))
-  (is (= (structurize :any '(+ 1 2)) '(1 " " + " " 2)))
-  (is (= (structurize :any '(is-prime 5)) '(is-prime "(" 5 ")")))
+(deftest structurize-test
+  (is (= (structurize :any '(assert true)) '(assert \( true \))))
+  (is (= (structurize :any (structurize :any '(assert true))) '(assert \( true \))))
+  (is (= (structurize :any '(assert-equal 3 (fib 4))) '(assert-equal \( 3 ", " (fib 4) \))))
+  (is (= (structurize :any '(+ 1 2)) '(1 \space + \space 2)))
+  (is (= (structurize :any '(is-prime 5)) '(is-prime \( 5 \))))
   (is (= (structurize :any 5) 5))
   (is (= (structurize :any '(not true)) '(not true)))
-  (is (= (structurize :python '(def my-var 1)) '(my-var " " = " " 1)))
-  (is (= (structurize :python '(def my-var "a")) '(my-var " " = " " \' "a" \')))
-  (is (= (structurize :python '(def my-var [1 "a"])) '(my-var " " = " " "[" 1 ", " \' "a" \' "]")))
+  (is (= (structurize :python '(def my-var 1)) '(my-var \space = \space 1)))
+  (is (= (structurize :python '(def my-var "a")) '(my-var \space = \space \' "a" \')))
+  (is (= (structurize :python '(def my-var [1 "a"])) '(my-var \space = \space \[ 1 ", " \' "a" \' \])))
   )
 
 (deftest translate-test
@@ -48,7 +48,7 @@
   (is (= (translate :python false) "False"))
   (is (= (translate :python nil) "None"))
   (is (= (translate :ruby nil) "nil"))
-  (is (= (translate :js nil) "null"))
+  (is (= (translate :javascript nil) "null"))
   )
 
 (deftest java-test
@@ -76,7 +76,7 @@
                       "assert(!false)" '(assert (not false))))
 
 (deftest javascript-test
-  (are [javascript clojure] (= javascript (generate :js clojure))
+  (are [javascript clojure] (= javascript (generate :javascript clojure))
                             "assert(true);" '(assert true)
                             "assert(isPrime(5));" '(assert (is-prime 5))
                             "assert(!false);" '(assert (not false))
