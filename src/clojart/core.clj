@@ -1,5 +1,5 @@
 (ns clojart.core
-  (:import (clojure.lang PersistentVector PersistentArrayMap)))
+  (:import (clojure.lang PersistentVector PersistentArrayMap Keyword)))
 
 (require '[clojure.string :as s])
 
@@ -20,6 +20,10 @@
 
                   (derive :python :simple)
                   (derive :ruby :simple)
+
+                  (derive :python :dynamic)
+                  (derive :ruby :dynamic)
+                  (derive :js :dynamic)
                   ))
 
 (def infix #{'+ '-})
@@ -31,6 +35,7 @@
     (instance? Boolean operator) :bool
     (some #{operator} logic) :logic
     (= operator 'def) :variable
+    (nil? operator) :nil
     :else :function))
 
 (defn insert [to what at]
@@ -38,21 +43,43 @@
     (concat before (list what) after)))
 
 (defmulti construct (fn [lang value] [lang (type value)]) :hierarchy #'taxonomy)
-(defmethod construct [:simple PersistentVector] [lang collection]
+(defmethod construct [:dynamic PersistentVector] [lang collection]
   (concat
     (list "[")
     (flatten (interpose ", " (map #(construct lang %) collection)))
     (list "]")))
 (defmethod construct [:ruby PersistentArrayMap] [lang dict]
-  (let [vals (->> (seq dict)
-                  (map #(assoc % 1 (construct lang (last %))))
-                  (map #(insert % " => " 1))
-                  )]
+  (let [vals (->> (zipmap
+                    (keys dict)
+                    (map #(construct lang %) (vals dict)))
+                  (seq)
+                  (map #(insert % " => " 1)))]
+    (concat
+      (list "{")
+      (flatten (interpose ", " vals))
+      (list "}"))))
+(defmethod construct [:python PersistentArrayMap] [lang dict]
+  (let [vals (->> (zipmap
+                    (map #(construct lang %) (keys dict))
+                    (map #(construct lang %) (vals dict)))
+                  (seq)
+                  (map #(insert % ": " 1)))]
+    (concat
+      (list "{")
+      (flatten (interpose ", " vals))
+      (list "}"))))
+(defmethod construct [:js PersistentArrayMap] [lang dict]
+  (let [vals (->> (zipmap
+                    (map #(construct lang %) (keys dict))
+                    (map #(construct lang %) (vals dict)))
+                  (seq)
+                  (map #(insert % ": " 1)))]
     (concat
       (list "{")
       (flatten (interpose ", " vals))
       (list "}"))))
 (defmethod construct [:any String] [_ string] (list \' string \'))
+(defmethod construct [:any Keyword] [_ keyword] (list \' (name keyword) \'))
 (defmethod construct :default [_ value] (list value))
 
 (defmulti restructure-seq (fn [lang expression] [lang (classify (first expression))]) :hierarchy #'taxonomy)
@@ -68,8 +95,11 @@
     (concat
       (list name " " '= " ")
       (construct lang value))))
-(defmethod restructure-seq [:js :variable] [_ expression]
-  (concat '(var " ") (restructure-seq :simple expression)))
+(defmethod restructure-seq [:js :variable] [lang expression]
+  (let [[_ name value] expression]
+    (concat
+      (list 'var " " name " " '= " ")
+      (construct lang value))))
 (defmethod restructure-seq :default [_ expression]
   (let [[operator & args] expression]
     (concat
@@ -94,6 +124,9 @@
 (defmethod translate [:underscore :function] [_ operator] (underscorize operator))
 (defmethod translate [:camelCase :function] [_ operator] (camelize operator))
 (defmethod translate [:python :bool] [_ operator] (s/capitalize operator))
+(defmethod translate [:python :nil] [_ _] "None")
+(defmethod translate [:ruby :nil] [_ _] "nil")
+(defmethod translate [:js :nil] [_ _] "null")
 (defmethod translate [:! :logic] [_ _] "!")
 (defmethod translate :default [_ operator] (str operator))
 

@@ -16,12 +16,12 @@
   )
 
 (deftest construct-test
-  (is (= (construct :simple [1]) '("[" 1 "]")))
-  (is (= (construct :simple ["a"]) '("[" "a" "]")))
-  (is (= (construct :simple [1 2]) '("[" 1 ", " 2 "]")))
+  (is (= (construct :dynamic [1]) '("[" 1 "]")))
+  (is (= (construct :dynamic ["a"]) '("[" "a" "]")))
+  (is (= (construct :dynamic [1 2]) '("[" 1 ", " 2 "]")))
   (is (= (construct :ruby {:k 1}) '("{" :k " => " 1 "}")))
   (is (= (construct :ruby {:k "v"}) '("{" :k " => " \' "v" \' "}")))
-  (is (= (construct :ruby {:a 1 :b 2}) '("{" :a " => " 1 ", " :b " => " 2 "}")))
+  (is (= (construct :ruby {:a 1, :b "b"}) '("{" :a " => " 1 ", " :b " => " \' "b" \' "}")))
   )
 
 (deftest restructure-test
@@ -44,6 +44,9 @@
   (is (= (translate :java true) "true"))
   (is (= (translate :python true) "True"))
   (is (= (translate :python false) "False"))
+  (is (= (translate :python nil) "None"))
+  (is (= (translate :ruby nil) "nil"))
+  (is (= (translate :js nil) "null"))
   )
 
 (deftest generate-java-test
@@ -60,7 +63,8 @@
   (is (= (generate :python '(assert-equal 3 (fib 4))) "assert_equal(3, fib(4))"))
   (is (= (generate :python '(assert (not false))) "assert(not False)"))
   (is (= (generate :python '(def my-var 1)) "my_var = 1"))
-  (is (= (generate :python '(def my-var [1 "a"])) "my_var = [1, 'a']"))
+  (is (= (generate :python '(def my-var [1 "a" nil])) "my_var = [1, 'a', None]"))
+  (is (= (generate :python '(def my-var {1 1, :b "b"})) "my_var = {1: 1, 'b': 'b'}"))
   )
 
 (deftest generate-ruby-test
@@ -69,8 +73,8 @@
   (is (= (generate :ruby '(assert-equal 3 (fib 4))) "assert_equal(3, fib(4))"))
   (is (= (generate :ruby '(assert (not false))) "assert(!false)"))
   (is (= (generate :ruby '(def my-var 1)) "my_var = 1"))
-  (is (= (generate :ruby '(def my-var [1 "a"])) "my_var = [1, 'a']"))
-  (is (= (generate :ruby '(def my-var {:a 1, :b "b"})) "my_var = {:a => 1, :b => 'b'}"))
+  (is (= (generate :ruby '(def my-var [1 "a" nil])) "my_var = [1, 'a', nil]"))
+  (is (= (generate :ruby '(def my-var {1 1, :b "b"})) "my_var = {1 => 1, :b => 'b'}"))
   )
 
 (deftest generate-javascript-test
@@ -79,5 +83,6 @@
   (is (= (generate :js '(assert-equal 3 (fib 4))) "assertEqual(3, fib(4))"))
   (is (= (generate :js '(assert (not false))) "assert(!false)"))
   (is (= (generate :js '(def my-var 1)) "var myVar = 1"))
-  (is (= (generate :ruby '(def my-var [1 "a"])) "my_var = [1, 'a']"))
+  (is (= (generate :js '(def my-var [1 "a" nil])) "var myVar = [1, 'a', null]"))
+  (is (= (generate :js '(def my-var {1 1, :b "b"})) "var myVar = {1: 1, 'b': 'b'}"))
   )
