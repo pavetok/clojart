@@ -1,4 +1,5 @@
-(ns clojart.core)
+(ns clojart.core
+  (:import (clojure.lang PersistentVector PersistentArrayMap)))
 
 (require '[clojure.string :as s])
 
@@ -32,25 +33,39 @@
     (= operator 'def) :variable
     :else :function))
 
+(defn insert [to what at]
+  (let [[before after] (split-at at to)]
+    (concat before (list what) after)))
+
+(defmulti construct (fn [lang collection] [lang (type collection)]) :hierarchy #'taxonomy)
+(defmethod construct [:simple PersistentVector] [_ collection]
+  (concat
+    (list "[")
+    (interpose ", " collection)
+    (list "]")))
+(defmethod construct [:ruby PersistentArrayMap] [_ dict]
+  (let [vals (map #(insert % " => " 1) (seq dict))]
+    (concat
+      (list "{")
+      (flatten (interpose ", " vals))
+      (list "}"))))
+(defmethod construct :default [_ value] (list value))
+
 (defmulti restructure-seq (fn [lang expression] [lang (classify (first expression))]) :hierarchy #'taxonomy)
-
 (defmethod restructure-seq [:any :logic] [_ operator] operator)
-
 (defmethod restructure-seq [:python :logic] [_ expression]
   (let [[operator operand] expression]
     (list operator " " operand)))
-
 (defmethod restructure-seq [:any :infix] [_ expression]
   (let [[operator left right] expression]
     (list left " " operator " " right)))
-
-(defmethod restructure-seq [:simple :variable] [_ expression]
+(defmethod restructure-seq [:simple :variable] [lang expression]
   (let [[_ name value] expression]
-    (list name " " '= " " value)))
-
+    (concat
+      (list name " " '= " ")
+      (construct lang value))))
 (defmethod restructure-seq [:js :variable] [_ expression]
   (concat '(var " ") (restructure-seq :simple expression)))
-
 (defmethod restructure-seq :default [_ expression]
   (let [[operator & args] expression]
     (concat
