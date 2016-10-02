@@ -1,5 +1,6 @@
 (ns clojart.core
-  (:import (clojure.lang PersistentVector PersistentArrayMap Keyword)))
+  (:import (clojure.lang PersistentVector PersistentArrayMap Keyword)
+           (java.util Collection)))
 
 (require '[clojure.string :as s])
 
@@ -43,7 +44,7 @@
     (concat before (list what) after)))
 
 (defmulti construct (fn [lang value] [lang (type value)]) :hierarchy #'taxonomy)
-(defmethod construct [:dynamic PersistentVector] [lang collection]
+(defmethod construct [:dynamic Collection] [lang collection]
   (concat
     (list "[")
     (flatten (interpose ", " (map #(construct lang %) collection)))
@@ -80,6 +81,7 @@
       (list "}"))))
 (defmethod construct [:any String] [_ string] (list \' string \'))
 (defmethod construct [:any Keyword] [_ keyword] (list \' (name keyword) \'))
+(defmethod construct [:ruby Keyword] [_ keyword] (list keyword))
 (defmethod construct :default [_ value] (list value))
 
 (defmulti restructure-seq (fn [lang expression] [lang (classify (first expression))]) :hierarchy #'taxonomy)
@@ -109,7 +111,7 @@
 
 (defn restructure [lang expression]
   (cond
-    (not (seq? expression)) expression
+    (not (coll? expression)) expression
     (:restructured (meta expression)) expression
     :else (with-meta (restructure-seq lang expression) {:restructured true})))
 
@@ -134,7 +136,7 @@
   "Generator of language specific expressions"
   [lang expression]
   (cond
-    (not (seq? expression)) (translate lang expression)
+    (not (coll? expression)) (translate lang expression)
     :else (s/join "" (->>
                        (restructure lang expression)
                        (map #(restructure lang %))
